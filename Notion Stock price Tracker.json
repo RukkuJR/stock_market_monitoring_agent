@@ -1,0 +1,331 @@
+{
+  "name": "Notion Stock price Tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "28835376-e61e-804f-ba2e-dc3672977a90",
+          "mode": "list",
+          "cachedResultName": "MY Stocks Analysis",
+          "cachedResultUrl": "https://www.notion.so/28835376e61e804fba2edc3672977a90"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        48,
+        -128
+      ],
+      "id": "085a3d89-daa9-4178-9139-d49d9e3e6a2f",
+      "name": "Notion",
+      "credentials": {
+        "notionApi": {
+          "id": "sFToOBBeZGp6MR6h",
+          "name": "Notion Arivu account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        256,
+        -128
+      ],
+      "id": "decee0a3-eda7-4a22-afdc-1e3fed813319",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "amount": 12
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        528,
+        128
+      ],
+      "id": "15ff746b-b9f9-4a55-9fd4-507602fce447",
+      "name": "Wait",
+      "webhookId": "0945fdbc-21f3-42f5-8849-0e9a183d5b17"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={{ $json[\"property_ticker\"] }}&apikey= L7X4DR2QZ6Z4TRYP\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        736,
+        128
+      ],
+      "id": "46a6b74e-2902-4b98-aec7-cb322a077071",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $('Wait').item.json.id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Current_Price|number",
+              "numberValue": "={{ Number($json['Global Quote']['05. price']) }}"
+            },
+            {
+              "key": "Price Date|date",
+              "includeTime": false,
+              "date": "={{ $json['Global Quote']['07. latest trading day'] }}",
+              "timezone": "Asia/Singapore"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        128
+      ],
+      "id": "591fe30b-a114-4b2d-b93c-9f56645e1dac",
+      "name": "Notion1",
+      "credentials": {
+        "notionApi": {
+          "id": "sFToOBBeZGp6MR6h",
+          "name": "Notion Arivu account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=stock name = {{ $json.property_name }},investment amouunt = {{ $json.property_investment_value }} growth = {{ $json.property_growth }} , growth value =  {{ $json.property_profit_loss }}",
+        "options": {
+          "systemMessage": "=You are stock agent. Please summarize the stock performance for each user input message items and send text to telegram in below formant:\n\nHi Socku: This is how you stocks have performed so far\n\nName   : {{ $json.name }}\nInvestment Amount: {{ $json.property_investment_value }}\nGrowth : {{ $json.property_growth }}\nGrowth Value : {{ $json.property_profit_loss }}\n\nGrowth has to be in % so please change it to % before sending. Growth value & Investment amount is actually rm so please ammend RM beginning of the value."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        848,
+        -320
+      ],
+      "id": "c6fd420a-185d-4e40-a923-515422027342",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        768,
+        -96
+      ],
+      "id": "509ea4e1-cf5a-4a5d-a809-d625631f149d",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "T1OuMOEN1t8vuE9l",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        992,
+        -96
+      ],
+      "id": "dc29c127-a6bc-4c32-acbc-6fc6a4973d4a",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "chatId": "5620067434",
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Text', ``, 'string') }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegramTool",
+      "typeVersion": 1.2,
+      "position": [
+        1152,
+        -128
+      ],
+      "id": "4a6f0dab-7521-4559-b9aa-7ceeac6db0cb",
+      "name": "Send a text message in Telegram",
+      "webhookId": "4f73fc75-7e48-48a9-8b1a-4e5b3d539ec1",
+      "credentials": {
+        "telegramApi": {
+          "id": "ihjydVJuzvnwpMIs",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                2
+              ]
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -160,
+        -128
+      ],
+      "id": "651e193d-29b6-498c-9728-9c704a22f180",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Notion": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Notion1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notion1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a text message in Telegram": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "85df94bb-30d5-427e-b0bd-b256fc1085bf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "298041bc2608408beaaf79b703a9e506ed46b9ec7f9520bd3013aa10c2364612"
+  },
+  "id": "Ofh7orjrryupxHrm",
+  "tags": []
+}
